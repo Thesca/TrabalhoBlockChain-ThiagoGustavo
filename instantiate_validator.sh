@@ -1,0 +1,1 @@
+docker run --rm -d --net nnc_network -p 8001:8001 nnc_validator
