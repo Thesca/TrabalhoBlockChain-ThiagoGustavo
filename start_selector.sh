@@ -1,0 +1,1 @@
+docker run --rm -p 8000:8000 --name nnc_selector-1 nnc_selector

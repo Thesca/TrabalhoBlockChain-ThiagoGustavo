@@ -1,0 +1,61 @@
+services:
+  selector:
+    build: selector/.
+    ports:
+      - "8000:8000"
+
+  validator-1:
+    container_name: validator-1
+    build: validator/.
+    ports:
+      - "8001:8000"
+    deploy:
+      resources:
+        limits:
+          memory: 0.5G
+  validator-2:
+    container_name: validator-2
+    build: validator/.
+    ports:
+      - "8002:8000"
+    deploy:
+      resources:
+        limits:
+          memory: 0.5G
+  validator-3:
+    container_name: validator-3
+    build: validator/.
+    ports:
+      - "8003:8000"
+    deploy:
+      resources:
+        limits:
+          memory: 0.5G
+  validator-4:
+    container_name: validator-4
+    build: validator/.
+    ports:
+      - "8004:8000"
+    deploy:
+      resources:
+        limits:
+          memory: 0.5G
+  validator-5:
+    container_name: validator-5
+    build: validator/.
+    ports:
+      - "8005:8000"
+    deploy:
+      resources:
+        limits:
+          memory: 0.5G
+  validator-6:
+    container_name: validator-6
+    build: validator/.
+    ports:
+      - "8006:8000"
+    deploy:
+      resources:
+        limits:
+          memory: 0.5G
+
