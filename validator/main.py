@@ -1,10 +1,13 @@
+import requests
 from fastapi import FastAPI
 from pydantic import BaseModel
+
+DB_API_URL = 'http://nonamecoin_db:5000'
 
 app = FastAPI()
 
 
-class Transaction(BaseModel):
+class Transacao(BaseModel):
     id : int
     rem : int
     reb : int
@@ -21,7 +24,10 @@ def healthcheck():
 
 
 @app.post("/validate")
-def validate(transaction: Transaction):
-    print(transaction.valor)
+def validate(transaction: Transacao):
+    response = requests.get(f'{DB_API_URL}/cliente/{transaction.rem}')
+    j = response.json()
+    assert j['qtdMoedas'] >= transaction.valor
+    
     return transaction.valor
     

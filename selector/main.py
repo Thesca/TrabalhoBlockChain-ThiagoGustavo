@@ -5,7 +5,7 @@ import requests
 import subprocess
 import random
 
-DB_API_URL = ''
+DB_API_URL = 'http://nonamecoin_db:5000'
 
 app = FastAPI()
 
@@ -27,6 +27,7 @@ def select_validators():
              'validator-5', 'validator-6']
     ips = random.choices(ips, k=3)  
     for ip in ips:
+        datetime = requests.get(f'{DB_API_URL}/hora')
         data = {'id': 0,'rem': 1,'reb': 2,'valor': 100,'status': 0,'datetime': 'night'}
         response = requests.post(f'http://{ip}:8000/validate', json=data)
         print(response.json())

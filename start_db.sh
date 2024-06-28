@@ -1,1 +1,0 @@
-docker run --rm --net nnc_network -p 8000:8000 nnc_db
