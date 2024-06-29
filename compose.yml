@@ -77,4 +77,6 @@ services:
     build: manager/.
     ports:
       - "1234:5000"
+    volumes:
+      - ${PWD}/manager/db/:/app/instance/
 

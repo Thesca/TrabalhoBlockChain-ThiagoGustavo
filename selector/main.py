@@ -1,9 +1,9 @@
 import os
-from fastapi import FastAPI
-from pydantic import BaseModel
 import requests
 import subprocess
 import random
+from fastapi import FastAPI
+from pydantic import BaseModel
 
 DB_API_URL = 'http://nonamecoin_db:5000'
 
@@ -27,11 +27,11 @@ def select_validators():
              'validator-5', 'validator-6']
     ips = random.choices(ips, k=3)  
     for ip in ips:
-        datetime = requests.get(f'{DB_API_URL}/hora')
-        data = {'id': 0,'rem': 1,'reb': 2,'valor': 100,'status': 0,'datetime': 'night'}
+        now = requests.get(f'{DB_API_URL}/hora').json()
+        data = {'id': 0,'rem': 1,'reb': 2,'valor': 100,'status': 0,'datetime': now}
         response = requests.post(f'http://{ip}:8000/validate', json=data)
-        print(response.json())
-    
+        print(response.text)
+
     
 @app.get("/healthcheck")
 def healthcheck():

@@ -3,7 +3,7 @@ from flask import Flask, request, redirect, render_template, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
   
 app = Flask(__name__)
 
@@ -79,6 +79,7 @@ def ListarCliente():
     if(request.method == 'GET'):
         clientes = Cliente.query.all()
         return jsonify(clientes)  
+
 
 @app.route('/cliente/<string:nome>/<string:senha>/<int:qtdMoedas>', methods = ['POST'])
 def InserirCliente(nome, senha, qtdMoedas):
@@ -262,7 +263,16 @@ def ListarTransacoes():
     if(request.method == 'GET'):
         transacoes = Transacao.query.all()
         return jsonify(transacoes)
-    
+
+
+@app.route('/transacoes/{cliente_id}', methods = ['GET'])
+def ListarTransacoesUltimoMinutoCliente(cliente_id):
+    last_minute = datetime.now() - timedelta(minutes=1)
+    if(request.method == 'GET'):
+        transacoes = Transacao.query.filter(Transacao.remetente == cliente_id,
+                                            Transacao.horario > last_minute).all()
+        return jsonify(transacoes)
+
     
 @app.route('/transacoes/<int:rem>/<int:reb>/<int:valor>', methods = ['POST'])
 def CriaTransacao(rem, reb, valor):
