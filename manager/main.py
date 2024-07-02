@@ -36,11 +36,13 @@ class Validador(db.Model):
     cliente_id: int
     peso: int
     flags: int
-    
+    transacao : int
+
     id = db.Column(db.Integer, primary_key=True)
     cliente_id = db.Column(db.Integer, db.ForeignKey(Cliente.id), unique=False)
     peso = db.Column(db.Integer, nullable=False)
     flags = db.Column(db.Integer, nullable=False)
+    transacao = db.Column(db.Integer, nullable=False)
 
 @dataclass
 class Seletor(db.Model):
@@ -57,6 +59,7 @@ class Transacao(db.Model):
     recebedor: int
     valor: int
     status: int
+    horario: datetime
     
     id = db.Column(db.Integer, primary_key=True)
     remetente = db.Column(db.Integer, unique=False, nullable=False)
