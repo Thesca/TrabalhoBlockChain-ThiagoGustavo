@@ -12,12 +12,11 @@ TRANSACTION_COUNTS = {}
 COUNTER_LIMIT = 100
 
 class Transacao(BaseModel):
-    id : int
-    rem : int
-    reb : int
+    id: int
+    remetente: int
+    recebedor: int
     valor: int
-    status : int
-    datetime: str
+    horario: str
     #Flags do seletor
     #Receber da request de validacao
     
@@ -29,37 +28,43 @@ def healthcheck():
 
 @app.post("/validate")
 def validate(transaction: Transacao):
+    status = 0
     # Checar se o rem tem credito o suficiente
-    response = requests.get(f'{DB_API_URL}/cliente/{transaction.rem}')
+    response = requests.get(f'{DB_API_URL}/cliente/{transaction.remetente}')
+    
     if response.status_code != 200:
         raise HTTPException(status_code=400, detail="Failed to fetch sender details")
+    
     sender_info = response.json()
+    if sender_info is None:
+        raise HTTPException(status_code=400, detail="Sender not registered as client")
+    
     if sender_info['qtdMoedas'] < transaction.valor:
-        transaction.status = 2  # Não aprovado (não tem credito)
+        status = 2  # Não aprovado (não tem credito)
         return transaction
 
     # Ver se o tempo da transação é válido
     current_time = requests.get(f'{DB_API_URL}/hora').json()
-    current_time = datetime.strptime(transaction.datetime, '%a, %d %b %Y %H:%M:%S %Z')
-    transaction_time = datetime.strptime(transaction.datetime, '%a, %d %b %Y %H:%M:%S %Z')
+    current_time = datetime.strptime(transaction.horario, '%a, %d %b %Y %H:%M:%S %Z')
+    transaction_time = datetime.strptime(transaction.horario, '%a, %d %b %Y %H:%M:%S %Z')
     if transaction_time > current_time or \
        transaction_time <= current_time - timedelta(minutes=1):
-        transaction.status = 2  # Não aprovado (tempo inválido)
+        status = 2  # Não aprovado (tempo inválido)
         return transaction
 
     # Ver o contador de transações por minuto do remetente
-    transactions_count = requests.get(f'{DB_API_URL}/transacoes/{transaction.rem}')
+    transactions_count = requests.get(f'{DB_API_URL}/transacoes/{transaction.remetente}')
     
-    if transaction.rem in TRANSACTION_COUNTS:
-        if len(TRANSACTION_COUNTS[transaction.rem]) >= COUNTER_LIMIT:
-            transaction.status = 2  # Não aprovado (excedeu a quantidade de transações)
+    if transaction.remetente in TRANSACTION_COUNTS:
+        if len(TRANSACTION_COUNTS[transaction.remetente]) >= COUNTER_LIMIT:
+            status = 2  # Não aprovado (excedeu a quantidade de transações)
             return transaction
     else:
-        TRANSACTION_COUNTS[transaction.rem] = []
+        TRANSACTION_COUNTS[transaction.remetente] = []
 
-    TRANSACTION_COUNTS[transaction.rem].append(transaction_time)
+    TRANSACTION_COUNTS[transaction.remetente].append(transaction_time)
     
     # Retorna a chave do seletor
-    transaction.status = 1  # Aprovado
-    return transaction
+    status = 1  # Aprovado
+    return status
     
