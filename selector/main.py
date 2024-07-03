@@ -6,6 +6,8 @@ import requests
 import random
 from datetime import datetime, timedelta
 from typing import List
+from datetime import datetime, timedelta
+from typing import List
 
 DB_API_URL = 'http://nonamecoin_db:5000'
 

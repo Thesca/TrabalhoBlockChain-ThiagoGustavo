@@ -1,15 +1,20 @@
 import requests
 from fastapi import FastAPI, HTTPException, Query   
+from fastapi import FastAPI, HTTPException, Query   
 from pydantic import BaseModel
+from datetime import datetime, timedelta
+from typing import Optional
 from datetime import datetime, timedelta
 from typing import Optional
 
 DB_API_URL = 'http://nonamecoin_db:5000'
 TRANSACTIONS_LIMIT = 60
+TRANSACTIONS_LIMIT = 60
 
 app = FastAPI()
 
 # Dicionario para guardar transações por minuto por remetente
+transaction_counts = {}
 transaction_counts = {}
 
 class Transacao(BaseModel):
