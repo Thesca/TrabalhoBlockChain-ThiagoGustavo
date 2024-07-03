@@ -1,4 +1,4 @@
-from time import time
+import requests
 from flask import Flask, request, redirect, render_template, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -19,11 +19,13 @@ class Cliente(db.Model):
     nome: str
     senha: int
     qtdMoedas: int
+    ip: str
     
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(20), unique=False, nullable=False)
     senha = db.Column(db.String(20), unique=False, nullable=False)
     qtdMoedas = db.Column(db.Integer, unique=False, nullable=False)
+    ip = db.Column(db.String(20), unique=True, nullable=False)
 
 @dataclass
 class Validador(db.Model):
@@ -34,21 +36,19 @@ class Validador(db.Model):
     cliente_id: int
     peso: int
     flags: int
-    
+
     id = db.Column(db.Integer, primary_key=True)
-    cliente_id = db.Column(db.String(20), db.ForeignKey(Cliente.id), unique=False)
+    cliente_id = db.Column(db.Integer, db.ForeignKey(Cliente.id), unique=False)
     peso = db.Column(db.Integer, nullable=False)
     flags = db.Column(db.Integer, nullable=False)
 
 @dataclass
 class Seletor(db.Model):
     id: int
-    nome: str
-    ip: str
+    cliente_id: int
     
     id = db.Column(db.Integer, primary_key=True)
-    nome = db.Column(db.String(20), unique=False, nullable=False)
-    ip = db.Column(db.String(15), unique=False, nullable=False)
+    cliente_id = db.Column(db.Integer, db.ForeignKey(Cliente.id), unique=False)
 
 @dataclass    
 class Transacao(db.Model):
@@ -57,6 +57,7 @@ class Transacao(db.Model):
     recebedor: int
     valor: int
     status: int
+    horario: datetime
     
     id = db.Column(db.Integer, primary_key=True)
     remetente = db.Column(db.Integer, unique=False, nullable=False)
@@ -81,10 +82,10 @@ def ListarCliente():
         return jsonify(clientes)  
 
 
-@app.route('/cliente/<string:nome>/<string:senha>/<int:qtdMoedas>', methods = ['POST'])
-def InserirCliente(nome, senha, qtdMoedas):
+@app.route('/cliente/<string:nome>/<string:senha>/<int:qtdMoedas>/<string:ip>', methods = ['POST'])
+def InserirCliente(nome, senha, qtdMoedas, ip):
     if request.method=='POST' and nome != '' and senha != '' and qtdMoedas != '':
-        objeto = Cliente(nome=nome, senha=senha, qtdMoedas=qtdMoedas)
+        objeto = Cliente(nome=nome, senha=senha, qtdMoedas=qtdMoedas, ip=ip)
         db.session.add(objeto)
         db.session.commit()
         return jsonify(objeto)
@@ -99,14 +100,11 @@ def UmCliente(id):
     else:
         return jsonify(['Method Not Allowed'])
 
-@app.route('/cliente/<int:id>/<int:qtdMoedas>', methods=["POST"])
+@app.route('/cliente/<int:id>/<int:qtdMoedas>', methods=["PUT"])
 def EditarCliente(id, qtdMoedas):
-    if request.method=='POST':
+    if request.method=='PUT':
         try:
-            varId = id
-            varqtdMoedas = qtdMoedas
             cliente = Cliente.query.filter_by(id=id).first()
-            db.session.commit()
             cliente.qtdMoedas = qtdMoedas
             db.session.commit()
             return jsonify(cliente)
@@ -139,10 +137,10 @@ def ListarValidador():
         validadores = Validador.query.all()
         return jsonify(validadores)  
 
-@app.route('/validador/<int:cliente_id>', methods = ['POST'])
-def InserirValidador(cliente_id, senha, qtdMoedas):
+@app.route('/validador/<int:cliente_id>/<int:peso>', methods = ['POST'])
+def InserirValidador(cliente_id, peso):
     if request.method=='POST' and cliente_id != '':
-        objeto = Validador(cliente_id=cliente_id, flags=0)
+        objeto = Validador(cliente_id=cliente_id, peso=peso, flags=0)
         db.session.add(objeto)
         db.session.commit()
         return jsonify(objeto)
@@ -157,14 +155,11 @@ def UmValidador(id):
     else:
         return jsonify(['Method Not Allowed'])
 
-@app.route('/validador/<int:id>/<int:qtdMoedas>', methods=["POST"])
+@app.route('/validador/<int:id>/<int:qtdMoedas>', methods=["PUT"])
 def EditarValidador(id, qtdMoedas):
-    if request.method=='POST':
+    if request.method=='PUT':
         try:
-            varId = id
-            varqtdMoedas = qtdMoedas
             validador = Validador.query.filter_by(id=id).first()
-            db.session.commit()
             validador.qtdMoedas = qtdMoedas
             db.session.commit()
             return jsonify(validador)
@@ -199,10 +194,10 @@ def ListarSeletor():
         produtos = Seletor.query.all()
         return jsonify(produtos)  
 
-@app.route('/seletor/<string:nome>/<string:ip>', methods = ['POST'])
-def InserirSeletor(nome, ip):
-    if request.method=='POST' and nome != '' and ip != '':
-        objeto = Seletor(nome=nome, ip=ip)
+@app.route('/seletor/<string:cliente_id>', methods = ['POST'])
+def InserirSeletor(cliente_id):
+    if request.method=='POST' and cliente_id != '':
+        objeto = Seletor(cliente_id=cliente_id)
         db.session.add(objeto)
         db.session.commit()
         return jsonify(objeto)
@@ -217,9 +212,9 @@ def UmSeletor(id):
     else:
         return jsonify(['Method Not Allowed'])
 
-@app.route('/seletor/<int:id>/<string:nome>/<string:ip>', methods=["POST"])
+@app.route('/seletor/<int:id>/<string:nome>/<string:ip>', methods=["PUT"])
 def EditarSeletor(id, nome, ip):
-    if request.method=='POST':
+    if request.method=='PUT':
         try:
             varNome = nome
             varIp = ip
@@ -280,15 +275,35 @@ def CriaTransacao(rem, reb, valor):
         objeto = Transacao(remetente=rem, recebedor=reb,valor=valor,status=0,horario=datetime.now())
         db.session.add(objeto)
         db.session.commit()
-		
+        
+        transacao = Transacao.query.filter_by(id=objeto.id).first()
+        
         seletores = Seletor.query.all()
-        for i in seletores:
-            url = seletores[i].ip + '/transacao'
-            request.post(url, data=jsonify(objeto))
+        for selector in seletores:
+            url = f'http://selector-{selector.id}:8000/transacao'
+            response = requests.post(url, json=jsonify(transacao).json)
+            print('\n\n\nURL', response.json(), flush=True)
+            if response.status_code != 200:
+                return jsonify(['Transaction validation has failed', response.json()])
+            print('\nTYPE', type(response.json()))
+            valor = response.json()['transaction']['valor']
+            
+        transacao.status = 1
+        db.session.commit()
+            
+        print('VALOR', valor)
+        cliente = Cliente.query.filter_by(id=rem).first()
+        cliente.qtdMoedas -= valor
+        db.session.commit()
+            
+        cliente = Cliente.query.filter_by(id=reb).first()
+        cliente.qtdMoedas += valor
+        db.session.commit()
 		
-        return jsonify(objeto)
+        return jsonify(cliente)
     else:
         return jsonify(['Method Not Allowed'])
+
 
 @app.route('/transacoes/<int:id>', methods = ['GET'])
 def UmaTransacao(id):
@@ -303,19 +318,38 @@ def EditaTransacao(id, status):
     if request.method=='POST':
         try:
             objeto = Transacao.query.filter_by(id=id).first()
-            db.session.commit()
             objeto.id = id
             objeto.status = status
             db.session.commit()
             return jsonify(objeto)
         except Exception as e:
             data={
-                "message": "transação não atualizada"
+                "message": "Transação não atualizada"
             }
             return jsonify(data)
     else:
         return jsonify(['Method Not Allowed'])
 
+@app.route('/delete_all', methods=['DELETE'])
+def DeletaBanco():
+    if request.method == 'DELETE':
+        try:
+            Cliente.query.delete()
+            Validador.query.delete()
+            Seletor.query.delete()
+            # Transacao.query.all().delete()
+            db.session.commit()
+            data={
+                "message": 'Tabelas Cliente e Validador Limpas com Sucesso'
+            }
+            return jsonify(data)
+        except Exception as e:
+            data={
+                "message": str(e)
+            }
+            return jsonify(data)
+    else:
+        return jsonify(['Method Not Allowed'])
 
 if __name__ == "__main__":
 	with app.app_context():
